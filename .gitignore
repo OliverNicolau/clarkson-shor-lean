@@ -1,1 +1,33 @@
-/.lake
+# Lean / Lake build artifacts
+.lake/
+build/
+
+# Blueprint generated outputs & web artifacts
+blueprint/print/
+blueprint/web/
+blueprint/src/dep_graph*
+blueprint/src/substitutions.tex
+blueprint/lean_decls
+
+# TeX & PlasTeX auxiliary files
+*.aux
+*.paux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+
+# Python / PlasTeX cache
+__pycache__/
+*.pyc
+.plasTeX/
+
+# System files
+.DS_Store
+
+# Very legal pdf of cited documents
+/bibliography_pdf

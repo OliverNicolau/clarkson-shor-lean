@@ -1,7 +1,153 @@
-% In this file you should put the actual content of the blueprint.
-% It will be used both by the web and the print version.
-% It should *not* include the \begin{document}
-%
-% If you want to split the blueprint content into several files then
-% the current file can be a simple sequence of \input. Otherwise It
-% can start with a \section or \chapter for instance.
+\section{Introduction}
+
+The random sampling technique by K.~L. Clarkson and P. Shor \cite{Clarkson89} offers a natural target for formalization in computational geometry. The framework relies on elegant, finite combinatorial structures that translate cleanly into type theory. Moreover, the technique has seen extensive generalization over the decades \cite{Sharir03, Bae25}.
+
+\begin{quote}
+``By now, the Clarkson-Shor technique needs no praise -- it has become a cornerstone of many of the developments in computational and combinatorial geometry \dots'' --- M. Sharir \cite{Sharir03}
+\end{quote}
+
+In this work, we formalize the main combinatorial lemma from the original paper by Clarkson and Shor \cite{Clarkson89}. While modern textbook presentations \cite{Mulmuley94, HarPeled11} often skip over the exact identity in this lemma in favor of more direct expectation bounds, the precise double-counting equality established in \cite[Lemma~2.1]{Clarkson89} plays a central role in recent generalizations of the technique \cite{Bae25}. In particular, setting up and solving systems of equations derived from this identity allows one to tightly bound the combinatorial complexity of higher-order color Voronoi diagrams.
+
+By formalizing Lemma~2.1 and Theorem~3.1 from \cite{Clarkson89}, our broader objective is to explore how interactive theorem provers and open-source collaborative formal mathematics \cite{Mathlib20} can be leveraged in computational geometry. While we aim to formalize foundations that are applicable to many problems in computational geometry, we are particularly motivated by potential applications to the axiomatic theory of abstract Voronoi diagrams \cite{Klein89}, whose abstract topological structure is especially well-suited for formalization in type theory.
+
+\section{Clarkson--Shor Formal Framework}
+
+While our formalization follows the lemma and theorem statements in \cite{Clarkson89}, we adopt parts of the modern terminology and notation in \cite{HarPeled11}. In particular, rather than the original concept of \emph{conflict relation}, we use the notion of \emph{killer set}. However, we retain the term \emph{configuration} over other less abstract alternatives.
+
+\begin{definition}[CS--structure]
+\label{def:CS_structure}
+\lean{ClarksonShorStructure}
+\uses{}
+A \emph{CS--structure} (a formal and abstract framework for geometric computations \cite{Clarkson89}) over two underlying types $\alpha$ and $\beta$ is a tuple $\mathcal{CS} = (S, \mathcal{C}, d, D, K)$ where:
+\begin{itemize}
+    \item $S$ is a finite set of $n \in \mathbb{N}$ \emph{objects} of type $\alpha$.
+    \item $\mathcal{C}$ is a finite set of \emph{configurations} of type $\beta$ (also known as \emph{ranges} or \emph{regions}).
+    \item $d \in \mathbb{N}$ is a constant called the \emph{combinatorial dimension}.
+    \item $D : \mathcal{C} \to \mathcal{P}(S)$ maps each configuration $\sigma \in \mathcal{C}$ to its \emph{defining set} (also known as its \emph{trigger set} \cite{Mulmuley94}).
+    \item $K : \mathcal{C} \to \mathcal{P}(S)$ maps each configuration $\sigma \in \mathcal{C}$ to its \emph{killer set} (also known as its \emph{stopping set} \cite{HarPeled11} or the set of \emph{objects in conflict with $\sigma$} \cite{Sharir03, Bae25}).
+    \item For each configuration $\sigma \in \mathcal{C}$, the cardinality of its defining set is bounded by the combinatorial dimension: $|D(\sigma)| \le d$.
+    \item For each configuration $\sigma \in \mathcal{C}$, its defining set and killer set are disjoint: $D(\sigma) \cap K(\sigma) = \emptyset$.
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Global Weight and Sampled Weight]
+\label{def:weights}
+\lean{ClarksonShorStructure.weight, ClarksonShorStructure.weightRel}
+\uses{def:CS_structure}
+Let $\mathcal{CS} = (S, \mathcal{C}, d, D, K)$ be a CS--structure. For a configuration $\sigma \in \mathcal{C}$:
+\begin{itemize}
+    \item Its \emph{global weight} (or simply \emph{weight}) is $\omega(\sigma) = |K(\sigma)|$.
+    \item For a sample $R \subseteq S$, its \emph{weight relative to $R$} (or \emph{sampled weight}) is $\omega_R(\sigma) = |K(\sigma) \cap R|$.
+\end{itemize}
+\end{definition}
+
+\begin{definition}[$j$-Weight Configurations and $0$-Weight Predicate]
+\label{def:j_weight_config}
+\lean{ClarksonShorStructure.AtWeight, ClarksonShorStructure.IsZeroWeight}
+\uses{def:CS_structure, def:weights}
+Let $\mathcal{CS} = (S, \mathcal{C}, d, D, K)$ be a CS--structure and let $R \subseteq S$ be a sample of $r$ objects.
+\begin{itemize}
+    \item For $j \in \mathbb{N}$, the set of \emph{$j$-weight configurations relative to $R$}, denoted $\mathcal{F}_R^j$, consists of all configurations whose defining set is contained in $R$ and whose relative weight in $R$ is $j$:
+    \[
+    \mathcal{F}_R^j = \{ \sigma \in \mathcal{C} \mid D(\sigma) \subseteq R \text{ and } \omega_R(\sigma) = j \}.
+    \]
+    \item A configuration $\sigma \in \mathcal{C}$ is said to have \emph{$0$-weight relative to $R$} if $\sigma \in \mathcal{F}_R^0$, denoted by the predicate $\mathrm{IsZeroWeight}_R(\sigma)$:
+    \[
+    \mathrm{IsZeroWeight}_R(\sigma) \iff D(\sigma) \subseteq R \text{ and } K(\sigma) \cap R = \emptyset.
+    \]
+\end{itemize}
+\end{definition}
+
+\section{Clarkson--Shor Main Lemma}
+
+\begin{lemma}[Probability of Zero Weight in $R$]
+\label{lem:prob_zero_weight}
+\lean{ClarksonShorStructure.prob_isZeroWeight_eq}
+\uses{def:CS_structure, def:weights, def:j_weight_config}
+Let $\mathcal{CS} = (S, \mathcal{C}, d, D, K)$ be a CS--structure with $|S| = n$. Fix a configuration $\sigma \in \mathcal{C}$ with defining set $D(\sigma)$ and global weight $\omega(\sigma)$. For any sample size $r$ satisfying $0 \le r \le n$, if a sample $R \subseteq S$ of size $r$ is chosen uniformly at random from all $r$-element subsets of $S$, the probability that $\mathrm{IsZeroWeight}_R(\sigma)$ holds is:
+\[
+\mathbb{P}_{|R|=r}\big[\mathrm{IsZeroWeight}_R(\sigma)\big] = \frac{\binom{n - |D(\sigma)| - \omega(\sigma)}{r - |D(\sigma)|}}{\binom{n}{r}},
+\]
+where binomial coefficients $\binom{a}{b}$ evaluate to $0$ when $b < 0$ or $b > a$.
+\end{lemma}
+\begin{proof}
+\leanok
+To satisfy $\mathrm{IsZeroWeight}_R(\sigma)$, the random sample $R$ must satisfy two conditions simultaneously:
+\begin{enumerate}
+    \item $D(\sigma) \subseteq R$: all $|D(\sigma)|$ objects of the defining set $D(\sigma)$ must be chosen.
+    \item $K(\sigma) \cap R = \emptyset$: none of the $\omega(\sigma)$ objects of the killer set $K(\sigma)$ can be chosen.
+\end{enumerate}
+Since $D(\sigma) \cap K(\sigma) = \emptyset$, the sets $D(\sigma)$ and $K(\sigma)$ partition $S$ into $D(\sigma)$ (size $|D(\sigma)|$), $K(\sigma)$ (size $\omega(\sigma)$), and the remaining objects $S \setminus (D(\sigma) \cup K(\sigma))$ of size $n - |D(\sigma)| - \omega(\sigma)$. 
+
+To construct a valid sample $R$ of size $r$, we must include all $|D(\sigma)|$ objects of $D(\sigma)$ and select the remaining $r - |D(\sigma)|$ objects entirely from $S \setminus (D(\sigma) \cup K(\sigma))$. The number of such valid subsets $R$ is $\binom{n - |D(\sigma)| - \omega(\sigma)}{r - |D(\sigma)|}$. Dividing this by the total number of $r$-object subsets $\binom{n}{r}$ yields the exact probability.
+\end{proof}
+
+\begin{lemma}[Exact Discrete Double-Counting Identity]
+\label{lem:exact_double_counting}
+\lean{ClarksonShorStructure.sum_zero_weight_choose_eq}
+\uses{def:CS_structure, def:weights, def:j_weight_config, lem:prob_zero_weight}
+Let $\mathcal{CS} = (S, \mathcal{C}, d, D, K)$ be a CS--structure with $|S| = n$. For any integer parameter $c \ge 0$ and sample size $r$ with $0 \le r \le n$, the following exact combinatorial identity holds:
+\[
+\sum_{\substack{R \subseteq S \\ |R| = r}} \sum_{\sigma \in \mathcal{F}_R^0} \binom{\omega(\sigma)}{c} = \sum_{\sigma \in \mathcal{C}} \binom{\omega(\sigma)}{c} \binom{n - |D(\sigma)| - \omega(\sigma)}{r - |D(\sigma)|}.
+\]
+\end{lemma}
+\begin{proof}
+\leanok
+We prove the identity by swapping the order of summation over samples $R$ and configurations $\sigma$.
+
+First, express the inner indicator using the $0$-weight predicate: for a fixed sample $R \subseteq S$ of size $r$, a configuration $\sigma$ belongs to $\mathcal{F}_R^0$ if and only if $\mathrm{IsZeroWeight}_R(\sigma)$ holds. Thus, we can rewrite the double sum over all $r$-element samples as:
+\[
+\sum_{\substack{R \subseteq S \\ |R| = r}} \sum_{\sigma \in \mathcal{F}_R^0} \binom{\omega(\sigma)}{c} = \sum_{\substack{R \subseteq S \\ |R| = r}} \sum_{\sigma \in \mathcal{C}} \mathbb{I}\big[\mathrm{IsZeroWeight}_R(\sigma)\big] \cdot \binom{\omega(\sigma)}{c},
+\]
+where $\mathbb{I}[\cdot]$ is the indicator function evaluating to $1$ when the predicate holds and $0$ otherwise.
+
+Exchanging the order of summation yields:
+\[
+\sum_{\sigma \in \mathcal{C}} \binom{\omega(\sigma)}{c} \sum_{\substack{R \subseteq S \\ |R| = r}} \mathbb{I}\big[\mathrm{IsZeroWeight}_R(\sigma)\big].
+\]
+The inner sum $\sum_{|R| = r} \mathbb{I}\big[\mathrm{IsZeroWeight}_R(\sigma)\big]$ simply counts the exact number of $r$-element subsets $R \subseteq S$ for which $\sigma$ is $0$-weight in $R$. 
+
+By Lemma~\ref{lem:prob_zero_weight}, the probability of selecting such a subset $R$ uniformly at random from all $\binom{n}{r}$ subsets of size $r$ is:
+\[
+\mathbb{P}_{|R|=r}\big[\mathrm{IsZeroWeight}_R(\sigma)\big] = \frac{\binom{n - |D(\sigma)| - \omega(\sigma)}{r - |D(\sigma)|}}{\binom{n}{r}}.
+\]
+Multiplying this probability by the total number of $r$-element subsets $\binom{n}{r}$, the count of valid samples $R$ for a fixed $\sigma$ is precisely:
+\[
+\sum_{\substack{R \subseteq S \\ |R| = r}} \mathbb{I}\big[\mathrm{IsZeroWeight}_R(\sigma)\big] = \binom{n - |D(\sigma)| - \omega(\sigma)}{r - |D(\sigma)|}.
+\]
+Substituting this back into the sum over $\sigma \in \mathcal{C}$ gives:
+\[
+\sum_{\substack{R \subseteq S \\ |R| = r}} \sum_{\sigma \in \mathcal{F}_R^0} \binom{\omega(\sigma)}{c} = \sum_{\sigma \in \mathcal{C}} \binom{\omega(\sigma)}{c} \binom{n - |D(\sigma)| - \omega(\sigma)}{r - |D(\sigma)|},
+\]
+which completes the proof.
+\end{proof}
+
+\begin{theorem}[Clarkson--Shor Main Lemma]
+\label{thm:clarkson_shor_main}
+\lean{ClarksonShorStructure.clarkson_shor_main_lemma}
+\uses{def:CS_structure, def:weights, def:j_weight_config, lem:exact_double_counting}
+Let $\mathcal{CS} = (S, \mathcal{C}, d, D, K)$ be a CS--structure with $|S| = n$, where every configuration $\sigma \in \mathcal{C}$ has defining set size $|D(\sigma)| \le d$. For any parameter $c \ge 0$ and sample size $r$ satisfying $d + c \le r \le n$, if a sample $R \subseteq S$ of size $r$ is chosen uniformly at random from all $r$-element subsets of $S$, then:
+\[
+\sum_{\sigma \in \mathcal{C}} \binom{\omega(\sigma)}{c} \binom{n - d - \omega(\sigma)}{r - d - c} \le \binom{n}{r} \mathbb{E}_{|R|=r} \left[ |\mathcal{F}_R^c| \right].
+\]
+In particular, when $|D(\sigma)| = d$ for all $\sigma \in \mathcal{C}$, strict equality holds.
+\end{theorem}
+\begin{proof}
+\leanok
+We begin with the discrete double-counting identity established in Lemma~\ref{lem:exact_double_counting}:
+\[
+\sum_{\substack{R \subseteq S \\ |R| = r}} \sum_{\sigma \in \mathcal{F}_R^0} \binom{\omega(\sigma)}{c} = \sum_{\sigma \in \mathcal{C}} \binom{\omega(\sigma)}{c} \binom{n - |D(\sigma)| - \omega(\sigma)}{r - |D(\sigma)|}.
+\]
+Notice that for a fixed configuration $\sigma$, the quantity $\sum_{R \in \binom{S}{r}, \sigma \in \mathcal{F}_R^0} \binom{\omega(\sigma)}{c}$ counts the number of pairs $(R, C_c)$, where $R \subseteq S$ is an $r$-element sample in which $\sigma$ is $0$-weight ($\mathrm{IsZeroWeight}_R(\sigma)$), and $C_c \subseteq K(\sigma)$ is a $c$-element subset of its killer set.
+
+Alternatively, consider constructing such a sample $R$ from a subset $R' = R \cup C_c$ of size $r' = r + c$. In the reduced sample $R'$, the configuration $\sigma$ has relative weight $\omega_{R'}(\sigma) = c$, meaning $\sigma \in \mathcal{F}_{R'}^c$. 
+
+Relabeling $r' \gets r$ and re-indexing the outer summation over $r$-element random samples $R \subseteq S$ yields:
+\[
+\sum_{\sigma \in \mathcal{C}} \binom{\omega(\sigma)}{c} \binom{n - |D(\sigma)| - \omega(\sigma)}{r - |D(\sigma)| - c} = \sum_{\substack{R \subseteq S \\ |R| = r}} |\mathcal{F}_R^c|.
+\]
+Dividing both sides by the total number of $r$-element subsets $\binom{n}{r}$ transforms the right-hand sum into the expectation $\mathbb{E}_{|R|=r} \left[ |\mathcal{F}_R^c| \right]$. Finally, applying the bound $|D(\sigma)| \le d$ on the combinatorial dimension on the left-hand side yields the required inequality.
+\end{proof}
+
+\bibliographystyle{plain}
+\bibliography{references}
