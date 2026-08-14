@@ -17,7 +17,27 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+
+      - name: Cache elan toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.elan
+          key: ${{ runner.os }}-elan-${{ hashFiles('lean-toolchain') }}
+          restore-keys: |
+            ${{ runner.os }}-elan-
+
+      - name: Cache Lake build
+        uses: actions/cache@v4
+        with:
+          path: |
+            .lake/build
+            .lake/packages
+          key: ${{ runner.os }}-lake-${{ hashFiles('lakefile.lean', 'lean-toolchain', 'lake-manifest.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lake-
+
       - uses: leanprover/lean-action@v1
         with:
           lint: false
+
       - uses: leanprover-community/docgen-action@v1
